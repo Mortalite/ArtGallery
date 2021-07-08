@@ -111,8 +111,16 @@ class GalleryFragment : Fragment() {
                                 it.currentPage = (
                                         ceil(size / (it.loadLimit + it.initLimit).toDouble()).toInt())
 */
+/*
                                 it.currentPage = (
                                         ceil(glManager.findLastVisibleItemPosition() / it.loadLimit.toDouble()).toInt())
+*/
+                                it.currentPage = (it.firstPage +
+                                        ceil(imagesCount / it.loadLimit.toDouble()).toInt())
+
+                                Log.e(TAG, "lastVisible = ${glManager.findLastVisibleItemPosition()}")
+                                Log.e(TAG, "itemCount = ${imagesCount}")
+
 
                                 it.previousItemCount = glManager.itemCount
                                 it.loadingStatus = 1
@@ -183,9 +191,9 @@ class GalleryFragment : Fragment() {
                 mainData?.dataAdapter?.galleryData.let {
                         galleryData ->
 
-/*                    val withImageCollection = response.body()?.data?.filter { it -> !it.imageId.isNullOrBlank() }
+                    val withImageCollection = response.body()?.data?.filter { it -> !it.imageId.isNullOrBlank() }
                     Log.e(TAG, "START_ASYNC")
-                    withImageCollection?.forEach {
+                    response.body()?.data?.forEach {
                         Log.e(TAG, "id = ${it.id}, imageId = ${it.imageId}")
                     }
                     Log.e(TAG, "END_ASYNC")
@@ -193,8 +201,9 @@ class GalleryFragment : Fragment() {
                         if (withImageCollection != null) {
                             galleryData?.addAll(withImageCollection)
                         }
-                    }*/
-                    response.body()?.data?.let { galleryData?.addAll(it) }
+                    }
+//                    response.body()?.data?.let { galleryData?.addAll(it) }
+                    imagesCount += response.body()?.data?.size ?: 0
 //                    settings?.totalPages = response.body()?.pagination?.totatPages ?: 10
                     mainData?.dataAdapter?.submitList(galleryData)
                     mainData?.dataAdapter?.notifyDataSetChanged()
@@ -222,6 +231,9 @@ class GalleryFragment : Fragment() {
     }
 
     companion object {
+
+        private var imagesCount: Int = 0
+
         @JvmStatic
         fun newInstance() =
             GalleryFragment().apply {

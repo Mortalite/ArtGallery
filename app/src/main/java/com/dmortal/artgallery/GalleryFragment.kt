@@ -70,8 +70,8 @@ class GalleryFragment : Fragment() {
     }
 
     fun onToolbarClickListener() {
-/*        binding.galleryToolbar.setOnMenuItemClickListener {
-            if (it.itemId == R.id.item_shuffle) {
+        binding.galleryToolbar.setOnMenuItemClickListener {
+/*            if (it.itemId == R.id.item_shuffle) {
                 settings?.let {
                     val newSettings = Settings()
                     val totalPages = it.totalPages
@@ -82,8 +82,12 @@ class GalleryFragment : Fragment() {
                     communicator?.openGalleryFragment()
                 }
             }
+            true*/
+            if (it.itemId == R.id.item_settings) {
+                communicator?.openSettingsFragment()
+            }
             true
-        }*/
+        }
     }
 
     private fun onScrollListener() {
@@ -118,8 +122,11 @@ class GalleryFragment : Fragment() {
                                 it.currentPage = (it.firstPage +
                                         ceil(imagesCount / it.loadLimit.toDouble()).toInt())
 
+/*
                                 Log.e(TAG, "lastVisible = ${glManager.findLastVisibleItemPosition()}")
                                 Log.e(TAG, "itemCount = ${imagesCount}")
+                                Log.e(TAG, "currentPage = ${it.currentPage}")
+*/
 
 
                                 it.previousItemCount = glManager.itemCount

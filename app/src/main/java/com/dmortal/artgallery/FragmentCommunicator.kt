@@ -10,4 +10,5 @@ interface FragmentCommunicator {
     fun setIsFirstCreate(value: Boolean)
     fun makeToast(message: String)
     fun openGalleryFragment()
+    fun openSettingsFragment()
 }

@@ -68,6 +68,13 @@ class MainActivity :    AppCompatActivity(),
 		transaction.commit()
 	}
 
+	override fun openSettingsFragment() {
+		val settingsFragment = SettingsFragment.newInstance()
+		val transaction = supportFragmentManager.beginTransaction()
+		transaction.replace(R.id.container, settingsFragment)
+		transaction.commit()
+	}
+
 	companion object {
 		private var isFirstCreate: Boolean = true
 		private var mainData: MainData = MainData()

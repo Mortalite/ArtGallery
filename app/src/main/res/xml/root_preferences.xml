@@ -1,14 +1,32 @@
-<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <PreferenceCategory app:title="Settings">
-
+    <PreferenceCategory app:title="@string/preference_title">
         <ListPreference
             app:title="Choose scale mode"
             app:key="scale_mode"
             app:entries="@array/scale_mode_entries"
             app:entryValues="@array/scale_mode_values">
+        </ListPreference>
+
+        <ListPreference
+            app:title="Choose grid span"
+            app:key="grid_size"
+            app:entries="@array/scale_mode_entries"
+            app:entryValues="@array/scale_mode_values"
+            >
 
         </ListPreference>
+    </PreferenceCategory>
+
+<!--    <PreferenceCategory app:title="Settings">-->
+
+<!--        <ListPreference
+            app:title="Choose scale mode"
+            app:key="scale_mode"
+            app:entries="@array/scale_mode_entries"
+            app:entryValues="@array/scale_mode_values">
+        </ListPreference>-->
 
 <!--
         <EditTextPreference
@@ -25,9 +43,9 @@
             app:useSimpleSummaryProvider="true" />
 -->
 
-    </PreferenceCategory>
+<!--    </PreferenceCategory>-->
 
- <!--   <PreferenceCategory app:title="@string/sync_header">
+<!--    <PreferenceCategory app:title="@string/sync_header">
 
         <SwitchPreferenceCompat
             app:key="sync"
@@ -41,5 +59,4 @@
             app:title="@string/attachment_title" />
 
     </PreferenceCategory>-->
-
 </PreferenceScreen>

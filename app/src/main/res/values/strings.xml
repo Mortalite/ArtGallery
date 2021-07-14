@@ -1,8 +1,7 @@
 <resources>
     <string name="app_name">ArtGallery</string>
-    <string name="hello_blank_fragment">Hello blank fragment</string>
-    <string name="toolbar_shuffle">toolbar_shuffle</string>
-    <string name="toolbar_settings">toolbar_settings</string>
+    <string name="toolbar_shuffle">Shuffle</string>
+    <string name="settings">Settings</string>
     <!-- Preference Titles -->
     <string name="messages_header">Messages</string>
     <string name="sync_header">Sync</string>
@@ -17,4 +16,9 @@
     <string name="attachment_summary_on">Automatically download attachments for incoming emails
     </string>
     <string name="attachment_summary_off">Only download attachments when manually requested</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_toolbar_back_arrow">Back</string>
+    <string name="settings_toolbar_title">Settings</string>
+    <string name="data_item_Image">image</string>
+    <string name="preference_title">Global Settings</string>
 </resources>

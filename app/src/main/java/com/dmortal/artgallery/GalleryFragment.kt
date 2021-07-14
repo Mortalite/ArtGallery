@@ -5,21 +5,18 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
 import android.view.*
+import android.widget.ImageView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.dmortal.artgallery.databinding.FragmentGalleryBinding
-import com.dmortal.artgallery.db.DBManager
-import com.dmortal.artgallery.ds.MainData
-import com.dmortal.artgallery.ds.Settings
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import kotlin.concurrent.fixedRateTimer
+import com.dmortal.artgallery.viewmodel.DataViewModel
+import com.dmortal.artgallery.viewmodel.InstanceSettingsViewModel
+import com.dmortal.artgallery.viewmodel.PersistentSettingsViewModel
+import java.lang.Thread.sleep
+import kotlin.concurrent.thread
 import kotlin.math.ceil
-
 
 class GalleryFragment : Fragment() {
 
@@ -27,15 +24,15 @@ class GalleryFragment : Fragment() {
     private var _binding: FragmentGalleryBinding? = null
     private val binding get() = _binding!!
 
-    private var dbManager: DBManager? = null
-    private var communicator: FragmentCommunicator? = null
-    private var mainData: MainData? = null
-    private var settings: Settings? = null
+    private var communicator: MainCommunicator? = null
+    private var dataViewModel: DataViewModel? = null
+    private var instanceSettingsViewModel: InstanceSettingsViewModel? = null
+    private var persistentSettingsViewModel: PersistentSettingsViewModel? = null
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
 
-        communicator = activity as FragmentCommunicator
+        communicator = activity as MainCommunicator
     }
 
     override fun onCreateView(
@@ -51,17 +48,14 @@ class GalleryFragment : Fragment() {
                     imageView.scaleType = ImageView.ScaleType.FIT_XY
             }
         }*/
-        initGalleryFragment(savedInstanceState)
+        toolbarSetup()
+        initViewModels()
         initAdapter()
         initRecyclerView()
         onScrollListener()
         onToolbarClickListener()
+        setObservers()
         return binding.root
-    }
-
-    override fun onStop() {
-        super.onStop()
-        dbManager?.saveSettings(settings)
     }
 
     override fun onDestroy() {
@@ -69,24 +63,64 @@ class GalleryFragment : Fragment() {
         _binding = null
     }
 
-    fun onToolbarClickListener() {
-        binding.galleryToolbar.setOnMenuItemClickListener {
-/*            if (it.itemId == R.id.item_shuffle) {
-                settings?.let {
-                    val newSettings = Settings()
-                    val totalPages = it.totalPages
+    private fun toolbarSetup() {
+        communicator?.disableToolbarTitle()
+    }
 
-                    newSettings.firstPage = (1..totalPages).random()
-//                    Log.e("${TAG} toolbar", newSettings.firstPage.toString())
-                    it.deepCopy(newSettings)
-                    communicator?.openGalleryFragment()
+    private fun initViewModels() {
+        dataViewModel = ViewModelProvider(requireActivity()).get(DataViewModel::class.java)
+        instanceSettingsViewModel = ViewModelProvider(requireActivity()).get(InstanceSettingsViewModel::class.java)
+        persistentSettingsViewModel = ViewModelProvider(requireActivity()).get(PersistentSettingsViewModel::class.java)
+    }
+
+    private fun initAdapter() {
+        dataViewModel?.let { data ->
+            instanceSettingsViewModel?.let { instanceSettings ->
+                if (instanceSettings.isFirstCreate) {
+                    instanceSettings.isFirstCreate = false
+                    persistentSettingsViewModel?.let { persistentSettings ->
+                        data.loadData(
+                            instanceSettings.firstPage,
+                            instanceSettings.initLimit * persistentSettings.getGridSpan(),
+                            instanceSettings.fields
+                        )
+                    }
                 }
             }
-            true*/
-            if (it.itemId == R.id.item_settings) {
-                communicator?.openSettingsFragment()
+        }
+    }
+
+    private fun initRecyclerView() {
+        with(binding.recyclerGalleryFragment) {
+            dataViewModel?.dataAdapter?.let { dataAdapter ->
+                instanceSettingsViewModel?.let { instanceSettings ->
+                    persistentSettingsViewModel?.let { persistentSettings ->
+                        apply {
+                            layoutManager = GridLayoutManager(
+                                context,
+                                persistentSettings.getGridSpan()
+                            )
+                            adapter = dataAdapter
+//                                persistentSettings.getPersistentSettings()
+//                                    ?.observe(viewLifecycleOwner, {
+//                                        layoutManager = GridLayoutManager(
+//                                            context,
+//                                            persistentSettings.getGridSpan()
+//                                        )
+//                                        adapter = dataAdapter
+//                                    })
+                        }
+                        postDelayed({
+                            scrollToPosition(
+                                when (resources.configuration.orientation) {
+                                    Configuration.ORIENTATION_PORTRAIT -> instanceSettings.lastCompletelyVisible
+                                    else -> instanceSettings.firstCompletelyVisible
+                                }
+                            )
+                        }, 200)
+                    }
+                }
             }
-            true
         }
     }
 
@@ -97,41 +131,38 @@ class GalleryFragment : Fragment() {
                     super.onScrolled(recyclerView, dx, dy)
 
                     if (dy > 0) {
-                        settings?.let {
-                            val glManager = layoutManager as GridLayoutManager
+                        instanceSettingsViewModel?.let { instanceSettings ->
+                            dataViewModel?.let { data ->
+                                val glManager = layoutManager as GridLayoutManager
 
-                            it.firstPosition =
-                                glManager.findFirstCompletelyVisibleItemPosition()
-                            it.lastPosition =
-                                glManager.findLastCompletelyVisibleItemPosition()
+                                instanceSettings.firstCompletelyVisible =
+                                    glManager.findFirstCompletelyVisibleItemPosition()
+                                instanceSettings.lastCompletelyVisible =
+                                    glManager.findLastCompletelyVisibleItemPosition()
 
-                            if (glManager.itemCount != it.previousItemCount)
-                                it.loadingStatus = 0
-                            if (it.loadingStatus == 0 &&
-                                glManager.findLastVisibleItemPosition() >= glManager.itemCount - 1) {
+                                if (glManager.itemCount != instanceSettings.previousItemCount)
+                                    instanceSettings.loadingStatus = 0
+                                if (instanceSettings.loadingStatus == 0 &&
+                                    glManager.findLastVisibleItemPosition() >= glManager.itemCount - 1) {
 
-/*
-                                val size = mainData?.dataAdapter?.galleryData?.size ?: 1
-                                it.currentPage = (
-                                        ceil(size / (it.loadLimit + it.initLimit).toDouble()).toInt())
-*/
-/*
-                                it.currentPage = (
-                                        ceil(glManager.findLastVisibleItemPosition() / it.loadLimit.toDouble()).toInt())
-*/
-                                it.currentPage = (it.firstPage +
-                                        ceil(imagesCount / it.loadLimit.toDouble()).toInt())
-
-/*
-                                Log.e(TAG, "lastVisible = ${glManager.findLastVisibleItemPosition()}")
-                                Log.e(TAG, "itemCount = ${imagesCount}")
-                                Log.e(TAG, "currentPage = ${it.currentPage}")
-*/
+                                    instanceSettings.currentPage = (instanceSettings.firstPage +
+                                            ceil(data.itemsCount / instanceSettings.loadLimit.toDouble()).toInt())
 
 
-                                it.previousItemCount = glManager.itemCount
-                                it.loadingStatus = 1
-                                loadMoreDataAsync(it.currentPage)
+                                    thread {
+                                        while (true) {
+                                            Log.e(TAG, "currentPage = ${instanceSettings.currentPage}")
+                                            Log.e(TAG, "firstCompletelyVisible = ${instanceSettings.firstCompletelyVisible}")
+                                            Log.e(TAG, "lastCompletelyVisible = ${instanceSettings.lastCompletelyVisible}")
+                                            Log.e(TAG, "scaleType = ${persistentSettingsViewModel?.getScaleType()}")
+                                            sleep(5000)
+                                        }
+                                    }
+
+                                    instanceSettings.previousItemCount = glManager.itemCount
+                                    instanceSettings.loadingStatus = 1
+                                    loadMoreDataAsync(instanceSettings.currentPage)
+                                }
                             }
                         }
                     }
@@ -140,106 +171,55 @@ class GalleryFragment : Fragment() {
         }
     }
 
-    private fun initGalleryFragment(savedInstanceState: Bundle?) {
-        mainData = communicator?.getMainData()
-        dbManager = context?.let { DBManager(it) }
-        settings = dbManager?.getSettings()
-//        settings?.toString()?.let { Log.e("${TAG} initGallery", it) }
-//        mainData?.dataAdapter?.galleryData?.let { Log.e("${TAG} initGallery", it.size.toString()) }
-
-    }
-
-    fun initAdapter() {
-        communicator?.let {
-            communicator ->
-            if (communicator.isFirstCreate()) {
-                communicator.setIsFirstCreate(false)
-                mainData?.let { data ->
-                    settings?.let { settings ->
-                        val call = data.service?.getImagesFromPage(
-                            settings.firstPage,
-                            settings.initLimit * settings.gridSpan,
-                            settings.fields
-                        )
-                        loadDataAsync(call)
-                    }
-                }
-            }
-        }
-
-    }
-
-    private fun initRecyclerView() {
-        with(binding.recyclerGalleryFragment) {
-            mainData?.let {
-                    mainData ->
+    private fun onToolbarClickListener() {
+/*        binding.galleryToolbar.setOnMenuItemClickListener {
+*//*            if (it.itemId == R.id.item_shuffle) {
                 settings?.let {
-                        settings ->
-                    apply {
-                        layoutManager = GridLayoutManager(context, settings.gridSpan)
-                        adapter = mainData.dataAdapter
-                    }
-                    if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT)
-                        postDelayed({ scrollToPosition(settings.lastPosition) }, 200)
-                    else
-                        postDelayed({ scrollToPosition(settings.firstPosition) }, 200)
+                    val newSettings = Settings()
+                    val totalPages = it.totalPages
+
+                    newSettings.firstPage = (1..totalPages).random()
+//                    Log.e("${TAG} toolbar", newSettings.firstPage.toString())
+                    it.deepCopy(newSettings)
+                    communicator?.openGalleryFragment()
                 }
             }
+            true*//*
+            if (it.itemId == R.id.item_settings) {
+                communicator?.openSettingsActivity()
+            }
+            true
+        }*/
+    }
+
+    private fun setObservers() {
+        persistentSettingsViewModel?.let { persistentSettings ->
+            persistentSettings.getPersistentSettings()?.observe(viewLifecycleOwner, {
+                if (it != null) {
+                    dataViewModel?.dataAdapter?.scaleType = persistentSettings.getScaleType()
+                    dataViewModel?.dataAdapter?.quality = "200"
+                    Log.e(TAG, "st = ${persistentSettings.getScaleType()}")
+                    Log.e(TAG, "quality = ${dataViewModel?.dataAdapter?.quality}")
+
+                }
+            })
         }
     }
 
-    fun loadDataAsync(call: Call<ResponseDTO>?) {
-        call?.enqueue(object : Callback<ResponseDTO> {
-
-            override fun onResponse(
-                call: Call<ResponseDTO>,
-                response: Response<ResponseDTO>
-            ) {
-                mainData?.dataAdapter?.galleryData.let {
-                        galleryData ->
-
-                    val withImageCollection = response.body()?.data?.filter { it -> !it.imageId.isNullOrBlank() }
-                    Log.e(TAG, "START_ASYNC")
-                    response.body()?.data?.forEach {
-                        Log.e(TAG, "id = ${it.id}, imageId = ${it.imageId}")
-                    }
-                    Log.e(TAG, "END_ASYNC")
-                    response.body()?.data?.let {
-                        if (withImageCollection != null) {
-                            galleryData?.addAll(withImageCollection)
-                        }
-                    }
-//                    response.body()?.data?.let { galleryData?.addAll(it) }
-                    imagesCount += response.body()?.data?.size ?: 0
-//                    settings?.totalPages = response.body()?.pagination?.totatPages ?: 10
-                    mainData?.dataAdapter?.submitList(galleryData)
-                    mainData?.dataAdapter?.notifyDataSetChanged()
-                }
-            }
-
-            override fun onFailure(call: Call<ResponseDTO>, t: Throwable) {
-                Log.e(TAG, t.printStackTrace().toString())
-            }
-
-        })
-    }
-
-    fun loadMoreDataAsync(page: Int) {
-        mainData?.let {
-                data ->
-            settings?.let {
-                    settings ->
-                val call = data.service?.getImagesFromPage(
-                    page, settings.loadLimit, settings.fields)
-                Log.e(TAG, "page = ${page}")
-                loadDataAsync(call)
+    private fun loadMoreDataAsync(page: Int) {
+        dataViewModel?.let {
+            data ->
+            instanceSettingsViewModel?.let {
+                instanceSettings ->
+                data.loadData(
+                    page,
+                    instanceSettings.loadLimit,
+                    instanceSettings.fields)
             }
         }
     }
 
     companion object {
-
-        private var imagesCount: Int = 0
 
         @JvmStatic
         fun newInstance() =

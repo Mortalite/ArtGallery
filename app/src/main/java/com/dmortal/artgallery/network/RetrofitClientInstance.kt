@@ -1,4 +1,4 @@
-package com.dmortal.artgallery.retrofit
+package com.dmortal.artgallery.network
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -6,7 +6,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 object RetrofitClientInstance {
 
     private var retrofit: Retrofit? = null
-    private const val BASE_URL = "https://api.artic.edu/"
+    const val BASE_URL = "https://api.artic.edu/"
 
     val retrofitInstance: Retrofit?
         get() {

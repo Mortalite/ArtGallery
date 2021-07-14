@@ -1,39 +1,70 @@
 package com.dmortal.artgallery
 
 import android.content.Context
-import android.content.SharedPreferences
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import androidx.preference.PreferenceFragmentCompat
-import androidx.preference.PreferenceManager
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
+import com.dmortal.artgallery.databinding.FragmentSettingsBinding
+import com.dmortal.artgallery.viewmodel.InstanceSettingsViewModel
+import com.dmortal.artgallery.viewmodel.PersistentSettingsViewModel
 
-class SettingsFragment : PreferenceFragmentCompat() {
+class SettingsFragment : Fragment() {
 
 	private val TAG = this.javaClass.simpleName
-	private var communicator: FragmentCommunicator? = null
-	private var SHARED_PREFERENCES = "SHARED_PREFERENCES"
+	private var _binding: FragmentSettingsBinding? = null
+	private val binding get() = _binding!!
+
+	private var communicator: SettingsCommunicator? = null
+	private var instanceSettingsViewModel: InstanceSettingsViewModel? = null
+	private var persistentSettingsViewModel: PersistentSettingsViewModel? = null
+
 	override fun onAttach(context: Context) {
 		super.onAttach(context)
 
-		communicator = activity as FragmentCommunicator
+		communicator = activity as SettingsCommunicator
 	}
-	override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-		setPreferencesFromResource(R.xml.root_preferences, rootKey)
-		PreferenceManager.getDefaultSharedPreferences(context).registerOnSharedPreferenceChangeListener { sharedPreferences, key ->
-			if (key == "scale_mode")
-				Log.e(TAG, sharedPreferences?.getString("scale_mode", "NOT SET") ?: "NOT SET")
+
+	override fun onCreateView(
+		inflater: LayoutInflater,
+		container: ViewGroup?,
+		savedInstanceState: Bundle?
+	): View {
+		_binding = FragmentSettingsBinding.inflate(inflater, container, false)
+		initViewModel()
+		setPreferenceFragment()
+		toolbarSetup()
+
+		binding.settingsToolbarBackArrow.setOnClickListener {
+			communicator?.openMainActivity()
 		}
+		return binding.root
 	}
 
+	override fun onDestroy() {
+		super.onDestroy()
+		_binding = null
+	}
 
-	override fun onStop() {
-		super.onStop()
+	private fun initViewModel() {
+		instanceSettingsViewModel = ViewModelProvider(requireActivity()).get(InstanceSettingsViewModel::class.java)
+		persistentSettingsViewModel = ViewModelProvider(requireActivity()).get(PersistentSettingsViewModel::class.java)
+	}
 
-//		val string = PreferenceManager.getDefaultSharedPreferences(activity).getString("scaleMode")
-//		val sharedPreferences: SharedPreferences? = activity?.getSharedPreferences(SHARED_PREFERENCES, Context.MODE_PRIVATE)
-//		val scaleMode = sharedPreferences?.getString("scale_mode", "NOT SET")
-//		Log.e(TAG, scaleMode.toString())
+	private fun setPreferenceFragment() {
+		val preferenceFragment = PreferenceFragment.newInstance()
+		val transaction = activity?.supportFragmentManager?.beginTransaction()
+		transaction?.replace(R.id.fragment_settings_container, preferenceFragment)
+		transaction?.commit()
+	}
 
+	private fun toolbarSetup() {
+		communicator?.disableToolbarTitle()
 	}
 
 	companion object {
